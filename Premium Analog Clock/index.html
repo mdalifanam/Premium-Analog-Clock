@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Nocturne | Premium Analog Clock</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      user-select: none; /* subtle: prevents accidental selection of text/clock */
+    }
+
+    body {
+      min-height: 100vh;
+      background: #0a0c10;
+      /* deep charcoal textured background — soft fabric / matte wall effect */
+      background-image: 
+        radial-gradient(circle at 25% 40%, rgba(30, 30, 35, 0.4) 2%, transparent 2.5%),
+        radial-gradient(circle at 75% 85%, rgba(25, 25, 30, 0.3) 1.5%, transparent 2%),
+        repeating-linear-gradient(45deg, rgba(255,255,240,0.02) 0px, rgba(255,255,240,0.02) 2px, transparent 2px, transparent 8px);
+      background-size: 40px 40px, 60px 60px, 12px 12px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, 'Poppins', sans-serif;
+      padding: 1.5rem;
+    }
+
+    /* main clock container — centering and scaling */
+    .clock-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 1.8rem;
+      position: relative;
+    }
+
+    /* wrapper for canvas + soft ambient lighting + spotlight effect */
+    .clock-wrapper {
+      position: relative;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      border-radius: 50%;
+      transition: all 0.4s cubic-bezier(0.2, 0.9, 0.4, 1.1);
+    }
+
+    /* hover effect: scale + glow increase (premium micro-interaction) */
+    .clock-wrapper:hover {
+      transform: scale(1.02);
+    }
+
+    .clock-wrapper:hover canvas {
+      filter: drop-shadow(0 0 8px rgba(255, 70, 70, 0.2)) drop-shadow(0 0 18px rgba(255, 255, 200, 0.15));
+      transition: filter 0.3s ease;
+    }
+
+    /* canvas styling: rounded, neumorphic shadows, inner depth, edge glow */
+    canvas {
+      display: block;
+      border-radius: 50%;
+      box-shadow: 
+        inset 0 4px 12px rgba(0, 0, 0, 0.55),        /* inner shadow for realistic depth */
+        inset 0 -2px 4px rgba(255, 255, 245, 0.08),  /* subtle inner highlight (top) */
+        0 20px 35px -8px rgba(0, 0, 0, 0.6),         /* outer deep shadow */
+        0 0 0 1.5px rgba(255, 255, 245, 0.12),       /* soft edge highlight */
+        0 0 18px rgba(0, 0, 0, 0.4);                 /* ambient outer glow */
+      transition: filter 0.2s ease, transform 0.2s ease;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    /* Responsive sizing: clock scales fluidly from mobile to desktop */
+    .clock-wrapper {
+      width: min(72vmin, 520px);
+      height: min(72vmin, 520px);
+    }
+
+    /* ---------- AMBIENT LIGHTING (behind the clock) ---------- */
+    .clock-wrapper::before {
+      content: "";
+      position: absolute;
+      top: 10%;
+      left: 10%;
+      width: 80%;
+      height: 80%;
+      background: radial-gradient(circle, rgba(230, 100, 80, 0.18) 0%, rgba(200, 80, 60, 0) 70%);
+      filter: blur(28px);
+      border-radius: 50%;
+      z-index: -2;
+      pointer-events: none;
+      transition: opacity 0.4s;
+    }
+
+    /* BLURRED SPOTLIGHT EFFECT FROM TOP (optional but added for premium depth) */
+    .clock-wrapper::after {
+      content: "";
+      position: absolute;
+      top: -18%;
+      left: 15%;
+      width: 70%;
+      height: 45%;
+      background: radial-gradient(ellipse at 50% 0%, rgba(255, 245, 210, 0.2) 0%, rgba(255, 245, 210, 0) 80%);
+      filter: blur(20px);
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: -1;
+      opacity: 0.65;
+    }
+
+    /* glassmorphism depth layering: a faint translucent outer ring (extra layering) */
+    .clock-wrapper .glass-ring {
+      position: absolute;
+      top: -6px;
+      left: -6px;
+      right: -6px;
+      bottom: -6px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(255,255,245,0.08) 0%, rgba(255,255,245,0) 70%);
+      pointer-events: none;
+      z-index: 1;
+      border: 1px solid rgba(255,255,210,0.1);
+      box-shadow: 0 0 22px rgba(0,0,0,0.3) inset;
+    }
+
+    /* typography: subtle embossed text below clock */
+    .time-caption {
+      text-align: center;
+      letter-spacing: 5px;
+      font-weight: 300;
+      font-size: clamp(0.8rem, 4vw, 1.2rem);
+      color: #acaeb3;
+      text-transform: uppercase;
+      opacity: 0.48;
+      text-shadow: 0px 1px 2px rgba(0, 0, 0, 0.6), 0px 0px 1px rgba(255, 255, 255, 0.15);
+      font-family: 'Inter', 'Segoe UI', monospace;
+      backdrop-filter: blur(2px);
+      transition: opacity 0.3s;
+      margin-top: 0.2rem;
+    }
+
+    .clock-container:hover .time-caption {
+      opacity: 0.65;
+    }
+
+    /* ensures absolute centering on all devices */
+    @media (max-width: 640px) {
+      .clock-wrapper {
+        width: min(80vw, 80vh);
+        height: min(80vw, 80vh);
+      }
+      .time-caption {
+        letter-spacing: 3px;
+        font-size: 0.75rem;
+      }
+    }
+  </style>
+</head>
+<body>
+<div class="clock-container">
+  <div class="clock-wrapper">
+    <!-- extra glassmorphic depth ring (pure aesthetic) -->
+    <div class="glass-ring"></div>
+    <canvas id="premiumClockCanvas" width="500" height="500"></canvas>
+  </div>
+  <div class="time-caption">TIME RUNS</div>
+</div>
+
+<script>
+  (function() {
+    // ----- DOM references -----
+    const canvas = document.getElementById('premiumClockCanvas');
+    const ctx = canvas.getContext('2d');
+
+    // container for dynamic resize (parent wrapper)
+    const wrapper = document.querySelector('.clock-wrapper');
+    
+    // ----- Clock configuration (elegant, minimal) -----
+    let width = 500, height = 500;     // initial fallback, will be updated dynamically
+    let radius = 0;
+    let centerX = 0, centerY = 0;
+
+    // ----- Helper: resize canvas and maintain crisp 1:1 pixel ratio -----
+    function resizeCanvas() {
+      if (!wrapper) return;
+      // get actual displayed size (CSS size) - we need pixel-perfect canvas buffer
+      const containerRect = wrapper.getBoundingClientRect();
+      let size = Math.floor(containerRect.width);
+      // avoid 0 size edge case
+      if (size < 20) size = 320;
+      
+      // set canvas drawing buffer dimensions (actual pixels)
+      canvas.width = size;
+      canvas.height = size;
+      
+      // update global vars
+      width = size;
+      height = size;
+      centerX = width / 2;
+      centerY = height / 2;
+      radius = width * 0.46;        // slight margin from edge for tick marks & glow
+      
+      // force a redraw after resize
+      drawClock();
+    }
+    
+    // ----- draw elegant tick marks (thin, minimal, no numbers) -----
+    function drawTicks() {
+      if (!ctx) return;
+      const tickCount = 60;
+      const majorTickInterval = 5;   // every 5th tick slightly longer (hour reference)
+      const tickWidth = radius * 0.06;      // length for major ticks
+      const smallTickWidth = radius * 0.035; // shorter for minutes
+      const startRadius = radius - 8;        // distance from edge where ticks begin
+      
+      for (let i = 0; i < tickCount; i++) {
+        const angle = (i * 6) * Math.PI / 180;   // 6 degrees per tick
+        const isMajor = (i % majorTickInterval === 0);
+        const tickLength = isMajor ? tickWidth : smallTickWidth;
+        const innerRadius = startRadius - tickLength;
+        const outerRadius = startRadius;
+        
+        const x1 = centerX + Math.cos(angle) * innerRadius;
+        const y1 = centerY + Math.sin(angle) * innerRadius;
+        const x2 = centerX + Math.cos(angle) * outerRadius;
+        const y2 = centerY + Math.sin(angle) * outerRadius;
+        
+        ctx.beginPath();
+        ctx.moveTo(x1, y1);
+        ctx.lineTo(x2, y2);
+        // elegant light grey stroke with low opacity / subtle
+        ctx.strokeStyle = isMajor ? 'rgba(210, 215, 225, 0.75)' : 'rgba(170, 180, 195, 0.55)';
+        ctx.lineWidth = isMajor ? 1.8 : 1.2;
+        ctx.lineCap = 'round';
+        ctx.stroke();
+      }
+      
+      // optional: add faint dots at cardinal points? no, keep minimal, but ultra subtle halo at 12-3-6-9 ?
+      // (pure minimal, already elegant)
+    }
+    
+    // ----- draw gradient clock face (premium matte with depth & glassmorphism) -----
+    function drawClockFace() {
+      // main radial gradient for 3D depth: from warm dark gray to deep charcoal
+      const grad = ctx.createRadialGradient(centerX - radius*0.08, centerY - radius*0.08, radius*0.12, centerX, centerY, radius);
+      grad.addColorStop(0, '#24282e');
+      grad.addColorStop(0.55, '#15181e');
+      grad.addColorStop(1, '#0b0d12');
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, radius + 1.5, 0, Math.PI * 2);
+      ctx.fill();
+      
+      // subtle inner 'soft matte' layer: adds slight luminosity variation (neumorphism effect)
+      ctx.save();
+      ctx.shadowBlur = 0;
+      const innerGlow = ctx.createRadialGradient(centerX - 3, centerY - 3, radius*0.2, centerX, centerY, radius*0.9);
+      innerGlow.addColorStop(0, 'rgba(60, 65, 75, 0.18)');
+      innerGlow.addColorStop(1, 'rgba(0, 0, 0, 0.25)');
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, radius - 2, 0, Math.PI * 2);
+      ctx.fillStyle = innerGlow;
+      ctx.fill();
+      ctx.restore();
+      
+      // extra depth: fine stroke around inner ring (premium edge definition)
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, radius - 3, 0, Math.PI * 2);
+      ctx.strokeStyle = 'rgba(0, 0, 0, 0.4)';
+      ctx.lineWidth = 1.2;
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, radius - 4.5, 0, Math.PI * 2);
+      ctx.strokeStyle = 'rgba(210, 200, 190, 0.12)';
+      ctx.lineWidth = 0.8;
+      ctx.stroke();
+    }
+    
+    // ----- draw hands (smooth continuous movement) with matte black & depth shadows -----
+    function drawHands(currentTime) {
+      const hours = currentTime.getHours();
+      const minutes = currentTime.getMinutes();
+      const seconds = currentTime.getSeconds();
+      const milliseconds = currentTime.getMilliseconds();
+      
+      // SMOOTH CONTINUOUS angles (no ticking)
+      // Second hand: full 360° per 60 seconds (including ms)
+      const secondAngle = ((seconds + milliseconds / 1000) * 6) * Math.PI / 180;
+      // Minute hand: accounts for seconds smoothly
+      const minuteAngle = ((minutes + seconds / 60) * 6) * Math.PI / 180;
+      // Hour hand: 30° per hour + minute influence (smooth)
+      const hourAngle = ((hours % 12 + minutes / 60) * 30) * Math.PI / 180;
+      
+      // hand dimensions (based on radius)
+      const hourLength = radius * 0.48;
+      const minuteLength = radius * 0.62;
+      const secondLength = radius * 0.72;
+      
+      // ---- HOUR HAND (matte black, soft shadow, rounded) ----
+      ctx.save();
+      ctx.shadowColor = 'rgba(0, 0, 0, 0.65)';
+      ctx.shadowBlur = 5;
+      ctx.shadowOffsetX = 1.5;
+      ctx.shadowOffsetY = 1.8;
+      ctx.beginPath();
+      ctx.moveTo(centerX, centerY);
+      const hourX = centerX + Math.cos(hourAngle) * hourLength;
+      const hourY = centerY + Math.sin(hourAngle) * hourLength;
+      ctx.lineTo(hourX, hourY);
+      ctx.lineWidth = 6.2;
+      ctx.lineCap = 'round';
+      ctx.strokeStyle = '#181C22';
+      ctx.stroke();
+      // extra thick base for elegance
+      ctx.beginPath();
+      ctx.moveTo(centerX, centerY);
+      ctx.lineTo(hourX, hourY);
+      ctx.lineWidth = 5;
+      ctx.strokeStyle = '#21272e';
+      ctx.stroke();
+      
+      // ---- MINUTE HAND (matte black, proportionate, depth) ----
+      ctx.beginPath();
+      ctx.moveTo(centerX, centerY);
+      const minuteX = centerX + Math.cos(minuteAngle) * minuteLength;
+      const minuteY = centerY + Math.sin(minuteAngle) * minuteLength;
+      ctx.lineTo(minuteX, minuteY);
+      ctx.lineWidth = 4.2;
+      ctx.strokeStyle = '#1F242C';
+      ctx.stroke();
+      // second stroke for richer look
+      ctx.beginPath();
+      ctx.moveTo(centerX, centerY);
+      ctx.lineTo(minuteX, minuteY);
+      ctx.lineWidth = 3.5;
+      ctx.strokeStyle = '#2F363F';
+      ctx.stroke();
+      
+      // ---- SECOND HAND (thin, vivid red, subtle shadow, smooth) ----
+      ctx.beginPath();
+      ctx.moveTo(centerX, centerY);
+      const secondX = centerX + Math.cos(secondAngle) * secondLength;
+      const secondY = centerY + Math.sin(secondAngle) * secondLength;
+      ctx.lineTo(secondX, secondY);
+      ctx.lineWidth = 2.1;
+      ctx.strokeStyle = '#E34D3A';
+      ctx.shadowColor = 'rgba(200, 60, 40, 0.45)';
+      ctx.shadowBlur = 4;
+      ctx.stroke();
+      ctx.restore(); // restore shadow to default (avoid affecting center pin)
+      
+      // reset shadow before center pin
+      ctx.save();
+      ctx.shadowBlur = 0;
+      ctx.shadowOffsetX = 0;
+      ctx.shadowOffsetY = 0;
+      
+      // elegant counterweight / small circle at base of seconds (optional)
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, 3.8, 0, 2 * Math.PI);
+      ctx.fillStyle = '#181C22';
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, 2.5, 0, 2 * Math.PI);
+      ctx.fillStyle = '#252B33';
+      ctx.fill();
+      ctx.restore();
+    }
+    
+    // ---- REALISTIC METALLIC CENTER PIN (extra premium detail) ----
+    function drawCenterPin() {
+      ctx.save();
+      ctx.shadowBlur = 2;
+      ctx.shadowColor = 'rgba(0,0,0,0.5)';
+      ctx.shadowOffsetX = 0.5;
+      ctx.shadowOffsetY = 0.8;
+      
+      // main metallic dome
+      const grad = ctx.createRadialGradient(centerX - 2, centerY - 2, 2, centerX, centerY, 9);
+      grad.addColorStop(0, '#C0C8D4');
+      grad.addColorStop(0.45, '#8F9AAD');
+      grad.addColorStop(1, '#4C5568');
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, 7.2, 0, Math.PI * 2);
+      ctx.fillStyle = grad;
+      ctx.fill();
+      
+      // inner shine
+      ctx.beginPath();
+      ctx.arc(centerX - 1, centerY - 1, 2.8, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(245, 248, 255, 0.9)';
+      ctx.fill();
+      
+      // tiny highlight
+      ctx.beginPath();
+      ctx.arc(centerX - 1.2, centerY - 1.5, 1, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(255, 255, 245, 0.95)';
+      ctx.fill();
+      
+      ctx.restore();
+      
+      // ultra fine outer ring to blend
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, 8.8, 0, Math.PI * 2);
+      ctx.strokeStyle = 'rgba(0,0,0,0.35)';
+      ctx.lineWidth = 0.8;
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, 5.2, 0, Math.PI * 2);
+      ctx.strokeStyle = 'rgba(210,200,210,0.25)';
+      ctx.lineWidth = 0.6;
+      ctx.stroke();
+    }
+    
+    // ---- soft inner shadows (additional neumorphism polish) ----
+    function drawInnerDepthEffects() {
+      // adds an ultra-subtle radial shadow near the edge to enhance 3D look
+      ctx.save();
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, radius - 1.8, 0, Math.PI * 2);
+      ctx.strokeStyle = 'rgba(0, 0, 0, 0.32)';
+      ctx.lineWidth = 2.2;
+      ctx.stroke();
+      // tiny inner highlight ring (premium)
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, radius - 5.5, 0, Math.PI * 2);
+      ctx.strokeStyle = 'rgba(255, 245, 235, 0.12)';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+      ctx.restore();
+    }
+    
+    // ----- MAIN DRAW FUNCTION (full clock redraw with smooth motion) -----
+    function drawClock() {
+      if (!ctx || width === 0 || height === 0) return;
+      
+      // clear canvas (full redraw)
+      ctx.clearRect(0, 0, width, height);
+      
+      // 1. draw premium gradient clock face with subtle texture simulation
+      drawClockFace();
+      
+      // 2. draw elegant tick marks (thin, minimal, no numbers)
+      drawTicks();
+      
+      // 3. get current precise time for smooth motion (including milliseconds)
+      const now = new Date();
+      
+      // 4. draw hour, minute, second hands (smooth continuous)
+      drawHands(now);
+      
+      // 5. metallic realistic center pin
+      drawCenterPin();
+      
+      // 6. extra depth / neumorphism finishing touches
+      drawInnerDepthEffects();
+      
+      // additional optional: tiny light reflection near edge for "soft glow"
+      ctx.save();
+      ctx.globalAlpha = 0.25;
+      const radialLight = ctx.createRadialGradient(centerX - 12, centerY - 12, 5, centerX, centerY, radius - 5);
+      radialLight.addColorStop(0, 'rgba(255, 245, 220, 0.12)');
+      radialLight.addColorStop(1, 'rgba(50, 40, 35, 0)');
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, radius - 3, 0, Math.PI * 2);
+      ctx.fillStyle = radialLight;
+      ctx.fill();
+      ctx.restore();
+    }
+    
+    // ----- ANIMATION LOOP (60fps for seamless second hand motion) -----
+    let animationId = null;
+    function animateClock() {
+      drawClock();   // draws using current time each frame → perfectly smooth movement
+      animationId = requestAnimationFrame(animateClock);
+    }
+    
+    // ----- RESIZE HANDLER (responsive + re-center canvas buffer)-----
+    let resizeTimeout;
+    function handleResize() {
+      clearTimeout(resizeTimeout);
+      resizeTimeout = setTimeout(() => {
+        resizeCanvas();
+      }, 80);
+    }
+    
+    // ----- initialization & set up event listeners -----
+    function init() {
+      if (!canvas || !wrapper) return;
+      resizeCanvas();     // initial dimension setting
+      // start animation loop (smooth continuous hands)
+      animateClock();
+      window.addEventListener('resize', handleResize);
+      window.addEventListener('orientationchange', () => {
+        setTimeout(resizeCanvas, 30);
+      });
+      // optional: observe if parent wrapper changes (edge-case, but resize covers)
+    }
+    
+    // when page fully loaded, start
+    window.addEventListener('load', init);
+  })();
+</script>
+</body>
+</html>
